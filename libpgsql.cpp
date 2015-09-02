@@ -32,6 +32,7 @@ int luaopen_pgsql(lua_State *L)
     };
     struct luaL_Reg  connMethod[] = {
     {"exec",execQuery},
+    {"close",close},
     {NULL,NULL}
     };
     luaL_register(L,"pgsql",luapgsql);
@@ -72,6 +73,20 @@ int connectdb(lua_State *L)
     }
 
     return 1;
+}
+
+int close(lua_State *L)
+{
+    PGconn *conn = pgsql_conn(L,1);
+    if ( conn == NULL )
+    {
+        lua_pushstring(L,"connection is closed or not created");
+        lua_error(L);
+    }else
+    {
+        PQfinish(conn);
+    }
+    return 0;
 }
 
 int execQuery(lua_State *L)
