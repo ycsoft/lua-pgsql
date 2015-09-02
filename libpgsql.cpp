@@ -32,6 +32,7 @@ int luaopen_pgsql(lua_State *L)
     };
     struct luaL_Reg  connMethod[] = {
     {"exec",execQuery},
+    {"save",saveData},
     {"close",close},
     {NULL,NULL}
     };
@@ -96,7 +97,21 @@ int execQuery(lua_State *L)
     cout<<"SQL:"<<sql<<endl;
     PGresult *result = PQexec(conn,sql);
     char *value = PQgetvalue(result,0,0);
-    cout<<value<<endl;
     lua_pushstring(L,value);
     return 1;
+}
+
+int saveData(lua_State *L)
+{
+    const char *name = luaL_checkstring(L,2);
+    int   age = luaL_checkinteger(L,3);
+    int   height = luaL_checkinteger(L,4);
+    int   weight = luaL_checkinteger(L,5);
+    char  sql[128] = {0};
+
+    PGconn *conn = pgsql_conn(L,1);
+    sprintf_s(sql,"insert into baseinfo values('%s',%d,%d,%d)",name,age,height,weight);
+    cout<<"SQL:"<<sql<<endl;
+    PQexec(conn,sql);
+    return 0;
 }
