@@ -4,8 +4,11 @@
 #include <libpq-fe.h>
 
 #define     CONN_METATABLE      "pgsql connection metatable"
+#define     RES_METATABLE       "pgsql result metatable"
 
 using namespace std;
+
+PGresult *g_result;
 
 int sayHello(lua_State *L)
 {
@@ -34,19 +37,22 @@ int luaopen_pgsql(lua_State *L)
     {"exec",execQuery},
     {"save",saveData},
     {"close",close},
+    {"clear",clearResult},
     {NULL,NULL}
+    };
+
+    struct luaL_Reg resMethod[] = {
+      {"clear",clearResult},
+      {NULL,NULL}
     };
     luaL_register(L,"pgsql",luapgsql);
     if (luaL_newmetatable(L,CONN_METATABLE))
     {
-
         luaL_register(L,NULL,connMethod);
         lua_pushliteral(L,"__index");
         lua_pushvalue(L,-2);
         lua_settable(L,-3);
     }
-
-
     return 0;
 }
 
@@ -76,6 +82,21 @@ int connectdb(lua_State *L)
     return 1;
 }
 
+int clearResult(lua_State *L)
+{
+    lua_getglobal(L,RES_METATABLE);
+    PGresult **res = (PGresult**)lua_touserdata(L,-1);
+    if ( *res == NULL )
+    {
+        lua_pushstring(L,"No results to clear");
+        lua_error(L);
+    }else
+    {
+        PQclear(*res);
+    }
+    return 0;
+}
+
 int close(lua_State *L)
 {
     PGconn *conn = pgsql_conn(L,1);
@@ -95,9 +116,11 @@ int execQuery(lua_State *L)
     PGconn *conn = pgsql_conn(L,1);
     const char *sql = luaL_checkstring(L,2);
     cout<<"SQL:"<<sql<<endl;
-    PGresult *result = PQexec(conn,sql);
-    char *value = PQgetvalue(result,0,0);
-    PQclear(result);
+//    PGresult *result = PQexec(conn,sql);
+    PGresult **result = (PGresult**)lua_newuserdata(L,sizeof(PGresult*));
+    lua_setglobal(L,RES_METATABLE);
+    *result = PQexec(conn,sql);
+    char *value = PQgetvalue(*result,0,0);
     lua_pushstring(L,value);
     return 1;
 }
