@@ -97,6 +97,7 @@ int execQuery(lua_State *L)
     cout<<"SQL:"<<sql<<endl;
     PGresult *result = PQexec(conn,sql);
     char *value = PQgetvalue(result,0,0);
+    PQclear(result);
     lua_pushstring(L,value);
     return 1;
 }
